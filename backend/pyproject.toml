@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "start-companion"
+version = "0.1.0"
+description = "START Companion - 基于 LangGraph 的 START 云游戏情感陪伴 Agent"
+requires-python = ">=3.11"
+license = "MIT"
+
+dependencies = [
+    # === LangGraph & LangChain Core ===
+    "langgraph>=0.2.0",
+    "langchain-core>=0.3.0",
+    "langchain-community>=0.3.0",
+
+    # === Web Framework ===
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "websockets>=12.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+
+    # === Model Providers (按需启用) ===
+    "langchain-openai>=0.2.0",
+    "httpx>=0.27.0",
+
+    # === Memory & Storage ===
+    "sqlalchemy>=2.0",
+    "aiosqlite>=0.20.0",
+
+    # === Utils ===
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+    "loguru>=0.7.0",
+    "numpy>=1.26.0",
+]
+
+[project.optional-dependencies]
+# 向量数据库 - 按需选择一种
+qdrant = ["qdrant-client>=1.9.0"]
+chroma = ["chromadb>=0.5.0"]
+milvus = ["pymilvus>=2.4.0"]
+
+# 额外模型支持
+anthropic = ["langchain-anthropic>=0.2.0"]
+hunyuan = ["tencentcloud-sdk-python>=3.0"]
+local = ["langchain-ollama>=0.2.0"]
+# 本地 HuggingFace 模型 (BGE, GTE, M3E 等 embedding 模型)
+huggingface = [
+    "langchain-huggingface>=0.1.0",
+    "sentence-transformers>=3.0.0",
+]
+
+# 语音服务
+voice = [
+    "openai-whisper>=20231117",
+    "soundfile>=0.12.0",
+    "numpy>=1.26.0",
+]
+
+# 开发工具
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.5.0",
+    "mypy>=1.10.0",
+    "pre-commit>=3.7.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

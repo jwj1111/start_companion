@@ -1,0 +1,38 @@
+# Agent Behavior Configuration
+
+# === 模型使用配置 ===
+# 此 agent 使用哪些模型角色（映射到 settings 中的模型配置）
+model_roles:
+  conversation: main       # 主对话用 main 模型
+  vision: vision           # 截图分析用 vision 模型
+  memory_extract: auxiliary  # 记忆提取用轻量模型
+  emotion: auxiliary       # 情感分析用轻量模型
+
+# === 对话策略 ===
+conversation:
+  max_history_in_context: 20    # 上下文中保留最近N轮对话
+  enable_memory_retrieval: true  # 是否检索长期记忆
+  memory_retrieval_count: 5     # 每次检索多少条
+  enable_auto_screenshot: true   # 是否自动定时截图
+  screenshot_interval: 30        # 自动截图间隔(秒)
+
+# === Tool 使用策略 ===
+tools:
+  enabled:
+    - screenshot
+    - memory_read
+    - memory_write
+    - knowledge_search
+    - web_search
+  # 某些 tool 的特殊配置
+  screenshot:
+    auto_trigger_on_silence: true
+    silence_threshold_seconds: 60
+  web_search:
+    prefer_knowledge_base: true   # 优先使用知识库，找不到再搜索
+
+# === 响应格式 ===
+response:
+  max_length: 500               # 单次回复最大字数
+  include_emotion_tag: true     # 响应中是否包含情感标签
+  include_live2d_action: true   # 是否触发 Live2D 动作

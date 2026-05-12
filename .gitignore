@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+*.env.local
+
+# Data (runtime generated)
+backend/data/*.db
+backend/data/*.sqlite
+
+# User customizations (runtime generated, per-deployment)
+backend/custom/*/
+
+# Node
+node_modules/
+.pnpm-store/
+
+# Build outputs
+frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker/volumes/

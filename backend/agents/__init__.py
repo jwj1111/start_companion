@@ -13,7 +13,6 @@ LangGraph Agent 定义。
         ▼
     主 Agent (ReAct) ──┬── Tool: screenshot（截图分析）
                        ├── Tool: game_info（知识库+联网搜索+总结，合一）
-                       ├── Tool: memory_write（对话中主动记录）
                        └── Sub Agent: emotion_analyzer（情感分析+Live2D）
 
     背景上下文（context_parts）和 Tool 结果走不同通道：

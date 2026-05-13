@@ -39,13 +39,11 @@ conversation:
   screenshot_interval: 30        # 自动截图间隔(秒)
 
 # === Tool 使用策略 ===
-# 注意：长期记忆的读取由 MemoryProvider 在入口处完成，不走 tool。
-# memory_write 仍作为 tool 保留，让模型可以在对话中主动记录重要信息。
+# 记忆读写都不走 tool：读取由 MemoryProvider 负责，写入在 session_end 自动提取。
 # game_info 合并了知识库搜索和联网搜索，内部自动选择来源并用 auxiliary 模型总结。
 tools:
   enabled:
     - screenshot
-    - memory_write
     - game_info
   # 某些 tool 的特殊配置
   screenshot:

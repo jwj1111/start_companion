@@ -14,7 +14,7 @@
 
 长期记忆写入路径：
     - session_end 时：extract_and_store() 批量提取 + 去重合并
-    - 对话中 tool：memory_write_tool → add_manual_card()
+    - 用户手动：通过 API 调用 add_manual_card()
 
 使用示例：
     manager = await MemoryManager.for_user(user_id="alice", agent_id="default")

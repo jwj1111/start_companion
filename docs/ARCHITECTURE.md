@@ -101,11 +101,10 @@ SP 由 `context_parts` 动态拼接，支持两种模式（配置切换）：
 |------|------|----------|
 | `screenshot_tool` | 截图 + 视觉模型分析 | 需要理解游戏画面时 |
 | `game_info_tool` | 游戏信息查询（知识库优先，没有就联网搜索，auxiliary 总结） | 用户问游戏问题时 |
-| `memory_write_tool` | 写入长期记忆（PENDING） | 对话中出现重要信息时 |
 
 注意：
-- 长期记忆的**读取**不走 Tool，由 `MemoryProvider` 在入口阶段完成注入。
-- `game_info_tool` 合并了原来分散的知识库搜索和联网搜索，内部自动选择来源并用 auxiliary 模型压缩总结，避免大段原文污染主 Agent 上下文。
+- 记忆读写都不走 Tool。读取由 `MemoryProvider` 在入口阶段注入 SP；写入在 session_end 时 LLM 自动提取。
+- `game_info_tool` 合并了原来分散的知识库搜索和联网搜索，内部自动选择来源并用 auxiliary 模型压缩总结。
 - 主 Agent 可以先调 `screenshot_tool` 获取画面描述，再通过 `game_info_tool` 的 `screen_context` 参数传入，也可以不传。
 
 ### 2.6 Sub-Agents（由 Main Agent 作为 Tool 调用）

@@ -1,4 +1,11 @@
-"""LangGraph 状态结构定义 —— 定义流经图中各节点的状态数据。"""
+"""
+LangGraph 状态结构定义 —— 定义流经图中各节点的状态数据。
+
+设计原则：
+- context_parts 是所有背景上下文的统一容器（由 Context Providers 填充）
+- Tool 的执行结果不需要单独字段，它们作为 ToolMessage 自然存在于 messages 中
+- 新增功能模块时只需新增 Provider，不需要改 state 定义
+"""
 
 from typing import Annotated, Any, TypedDict
 
@@ -22,15 +29,12 @@ class AgentState(TypedDict):
     # === Agent 配置（预设 + 用户自定义 合并后的结果） ===
     agent_config: dict[str, Any]
 
-    # === 上下文信息（由各 tool / node 填充） ===
-    # 当前截图分析结果
-    current_screen_context: str | None
-    # 本轮从长期记忆召回的卡片（已格式化为文本，待注入 prompt）
-    recalled_memory_text: str | None
-    # 检索到的游戏知识
-    game_knowledge: list[str] | None
-    # 联网搜索结果
-    web_search_results: list[str] | None
+    # === 背景上下文（由 Context Providers 在 route_input 中填充） ===
+    # key = provider name, value = 该 provider 产出的文本
+    # 例: {"persona": "你是小星...", "profile": "称呼: 老板...", "memory": "上次..."}
+    # 为空的 provider 不会出现在字典中
+    # Tool 的结果（截图、知识库、搜索）不在这里，它们作为 ToolMessage 存在于 messages 中
+    context_parts: dict[str, str]
 
     # === 输出元数据 ===
     # 情感标签（用于驱动 Live2D 表情）

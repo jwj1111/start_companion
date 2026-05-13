@@ -1,38 +1,14 @@
 # Prompt Templates for Default Agent
 # These are Jinja2-style templates that get rendered with context variables.
+#
+# 注意：主 System Prompt 不再由模板拼接。
+# 它由 context_providers 各自产出文本片段，在 call_main_agent 中动态组装。
+# 这样新增/删除功能模块时不需要改模板。
+#
+# 本文件只保留「辅助任务」的 prompt 模板（记忆提取、情感分析等），
+# 这些由 auxiliary 模型使用，不是主 SP 的一部分。
 
-# === System Prompt (主系统提示词) ===
-system_prompt: |
-  你是 {{ agent_name }}，{{ persona_background }}
-
-  ## 你的性格特征
-  {{ traits_description }}
-
-  ## 交流风格
-  {{ speaking_style }}
-
-  ## 当前上下文
-  {% if screen_context %}
-  [当前游戏画面]: {{ screen_context }}
-  {% endif %}
-  {% if game_knowledge %}
-  [游戏知识参考]: {{ game_knowledge }}
-  {% endif %}
-  {% if memories %}
-  [相关记忆]:
-  {% for memory in memories %}
-  - {{ memory }}
-  {% endfor %}
-  {% endif %}
-
-  ## 行为准则
-  - 用自然流畅的方式回应，像朋友一样交流
-  - 如果需要了解游戏画面，使用截图工具
-  - 如果遇到不确定的游戏问题，查询知识库或搜索
-  - 注意观察用户的情绪状态，给予适当回应
-  - 记住用户告诉你的重要信息
-
-# === Memory Extraction Prompt (记忆提取) ===
+# === Memory Extraction Prompt (记忆提取，由 extractor 使用) ===
 memory_extraction_prompt: |
   分析以下对话，提取值得长期记住的信息。
   只提取重要的事实、偏好、事件，不要提取日常闲聊。
@@ -43,7 +19,20 @@ memory_extraction_prompt: |
   请以JSON格式输出提取的记忆:
   [{"content": "...", "category": "fact|preference|event", "importance": 0.0-1.0}]
 
-# === Emotion Analysis Prompt (情感分析) ===
+# === Memory Query Rewrite Prompt (记忆检索 query 改写，由 MemoryProvider 使用) ===
+memory_query_rewrite_prompt: |
+  用户说了这句话: "{{ user_message }}"
+
+  最近几轮对话上下文:
+  {{ recent_context }}
+
+  请将用户的话改写为适合向量检索的查询语句。
+  要求：
+  - 解析代词和指代（"那个""上次"等），替换为具体内容
+  - 保留关键实体和意图
+  - 只输出改写后的查询，不要其他内容
+
+# === Emotion Analysis Prompt (情感分析，由 emotion_analyzer 使用) ===
 emotion_analysis_prompt: |
   分析以下消息的情感状态:
   "{{ message }}"
@@ -51,3 +40,21 @@ emotion_analysis_prompt: |
   上下文: {{ context }}
 
   输出JSON: {"emotion": "...", "intensity": 0.0-1.0, "suggested_response_tone": "..."}
+
+# === Profile Extraction Prompt (档案提取，由 profile_updater 在 session_end 使用) ===
+profile_extraction_prompt: |
+  分析以下完整对话，提取关于用户的结构化信息。
+
+  当前已知档案:
+  {{ current_profile }}
+
+  本次对话:
+  {{ conversation }}
+
+  请输出需要新增或更新的字段（JSON 格式）:
+  {"field_name": "value", ...}
+
+  规则：
+  - 只输出有明确依据的字段，不要猜测
+  - 如果用户纠正了之前的信息，输出新值覆盖旧值
+  - 常见字段: nickname, birthday, favorite_game, favorite_character, play_style 等

@@ -1,40 +1,18 @@
 """
-记忆读写 Tool。
+记忆写入 Tool —— 让 Agent 在对话中主动记录重要信息。
 
-让 Agent 能够在对话中**主动**调用：
-- 从长期记忆中检索（作为自动召回的补充，避免漏召回）
-- 把重要信息写入长期记忆（默认 PENDING，等用户审核）
+设计说明：
+- 长期记忆的**读取**由 route_input 节点的预注入流程负责（Gate → 改写 → 检索 → 注入 SP），
+  不再通过 Tool Calling 实现，因为预注入能让模型"带着记忆从头生成"，体验更好。
+- 本文件只保留**写入** tool，允许主模型在对话过程中主动把重要信息存入记忆。
+- 写入的卡片默认 status=PENDING，等用户审核通过后才参与后续召回。
 
-这些 tool 通过 LangGraph 的 ReAct 机制暴露给主 Agent。
-实际的存储由 MemoryManager 负责，这里只做接口转发。
-
-注意：
-- Tool 内部需要拿到当前 (user_id, agent_id)，通常通过上下文注入（见 TODO）
-- 用户隔离由 MemoryManager 内部保证，这里不做二次校验
+用户隔离：
+- Tool 内部通过 LangGraph 的 RunnableConfig 获取当前 (user_id, agent_id)。
+- 实际存储由 MemoryManager 负责。
 """
 
 from langchain_core.tools import tool
-
-
-@tool
-async def memory_read_tool(query: str) -> str:
-    """
-    从长期记忆中检索与当前话题相关的信息。
-
-    当需要回忆之前的对话内容、用户偏好、或重要事件时使用此工具。
-
-    Args:
-        query: 检索查询，描述想要回忆的内容
-
-    Returns:
-        相关的记忆内容列表（纯文本拼接）
-    """
-    # TODO: 实现
-    # 1. 从 RunnableConfig 或 ContextVar 里取出当前 user_id / agent_id
-    # 2. manager = await MemoryManager.for_user(user_id, agent_id, ...)
-    # 3. results = await manager.recall(query, limit=5)
-    # 4. 格式化为文本返回
-    raise NotImplementedError("需要对接 MemoryManager")
 
 
 @tool
@@ -43,7 +21,7 @@ async def memory_write_tool(content: str, importance: float = 0.5) -> str:
     将重要信息存入长期记忆。
 
     当对话中出现值得记住的信息时使用此工具，例如用户的偏好、重要事件、关键决定等。
-    存入后默认处于 PENDING 状态，等用户审核。
+    存入后默认处于待审核状态，需用户确认后才会在未来对话中被召回。
 
     Args:
         content: 需要记住的信息内容
@@ -53,7 +31,14 @@ async def memory_write_tool(content: str, importance: float = 0.5) -> str:
         存储确认信息
     """
     # TODO: 实现
-    # 1. 从上下文取 user_id / agent_id
-    # 2. 构造 MemoryCard(content=..., importance=..., status=PENDING, source=LLM_EXTRACTED)
-    # 3. manager.long_term.add_card(card)
+    # 1. 从 RunnableConfig 或 ContextVar 取出当前 user_id / agent_id
+    # 2. manager = await MemoryManager.for_user(user_id, agent_id)
+    # 3. card = MemoryCard(
+    #        content=content,
+    #        importance=importance,
+    #        status=MemoryCardStatus.PENDING,
+    #        source=MemorySource.LLM_EXTRACTED,
+    #    )
+    # 4. card_id = await manager.add_manual_card(card)
+    # 5. return f"已记录（待审核）: {content[:50]}..."
     raise NotImplementedError("需要对接 MemoryManager")

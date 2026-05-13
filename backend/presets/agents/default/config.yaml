@@ -7,20 +7,43 @@ model_roles:
   vision: vision           # 截图分析用 vision 模型
   memory_extract: auxiliary  # 记忆提取用轻量模型
   emotion: auxiliary       # 情感分析用轻量模型
+  query_rewrite: auxiliary  # 记忆检索 query 改写用轻量模型
+
+# === System Prompt 组装模式 ===
+# "unified": 所有上下文拼成一个 SystemMessage（兼容性最好）
+# "split":   STATIC 组和 DYNAMIC 组分成两个 SystemMessage（固定部分可利用 prompt caching）
+# 两种模式都保留，方便测试后选定
+sp_mode: unified
+
+# === Context Providers 配置 ===
+# 可插拔的背景上下文提供者，新增模块只需在 context_providers/ 下加文件并注册
+context_providers:
+  # 可以在此禁用特定 provider（取消注释即可）
+  disabled: []
+    # - memory     # 禁用长期记忆召回
+    # - profile    # 禁用用户档案
+
+# === 记忆配置 ===
+memory:
+  # Gate 参数（控制哪些消息触发长期记忆检索）
+  gate_min_chars: 4          # 短于此字符数的消息不触发检索
+  gate_default_retrieve: true  # 规则都没命中时是否默认检索
+  # 检索参数
+  retrieval_count: 5           # 每次检索返回的最大卡片数
+  score_threshold: 0.5         # 最低相似度阈值
 
 # === 对话策略 ===
 conversation:
   max_history_in_context: 20    # 上下文中保留最近N轮对话
-  enable_memory_retrieval: true  # 是否检索长期记忆
-  memory_retrieval_count: 5     # 每次检索多少条
   enable_auto_screenshot: true   # 是否自动定时截图
   screenshot_interval: 30        # 自动截图间隔(秒)
 
 # === Tool 使用策略 ===
+# 注意：长期记忆的读取由 MemoryProvider 在入口处完成，不走 tool。
+# memory_write 仍作为 tool 保留，让模型可以在对话中主动记录重要信息。
 tools:
   enabled:
     - screenshot
-    - memory_read
     - memory_write
     - knowledge_search
     - web_search

@@ -7,9 +7,7 @@
         user_id TEXT NOT NULL,
         agent_id TEXT NOT NULL,
         content TEXT NOT NULL,
-        category TEXT NOT NULL,
         tags TEXT,                    -- JSON array
-        importance REAL,
         status TEXT NOT NULL,
         source TEXT,
         source_session_id TEXT,
@@ -31,7 +29,7 @@
 """
 
 from memory.relational.base import BaseCardStore
-from memory.schema import MemoryCard, MemoryCardStatus, MemoryCategory
+from memory.schema import MemoryCard, MemoryCardStatus
 
 
 class SqliteCardStore(BaseCardStore):
@@ -79,7 +77,6 @@ class SqliteCardStore(BaseCardStore):
         user_id: str,
         agent_id: str | None = None,
         status: MemoryCardStatus | None = None,
-        category: MemoryCategory | None = None,
         tags: list[str] | None = None,
         limit: int = 50,
         offset: int = 0,

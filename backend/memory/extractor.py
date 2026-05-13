@@ -8,16 +8,20 @@
 
 提取的记忆默认状态为 PENDING（待审），
 等用户审核通过后才变 ACTIVE。
+
+设计决策：
+- 不让 LLM 打 importance 分（不稳定且无实际用途）
+- 提取质量完全靠 prompt 约束（"只提取重要信息，不提取闲聊"）
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from langchain_core.messages import BaseMessage
 from loguru import logger
 
-from memory.schema import MemoryCard, MemoryCardStatus, MemoryCategory, MemorySource
+from memory.schema import MemoryCard, MemoryCardStatus, MemorySource
 
 
 @dataclass
@@ -25,9 +29,7 @@ class ExtractionCandidate:
     """LLM 提取出的一条候选记忆（尚未落库）。"""
 
     content: str
-    category: MemoryCategory
-    importance: float
-    tags: list[str]
+    tags: list[str] = field(default_factory=list)
 
 
 class MemoryExtractor:
@@ -40,10 +42,8 @@ class MemoryExtractor:
     def __init__(
         self,
         extract_fn,  # async (messages: list[BaseMessage]) -> list[ExtractionCandidate]
-        importance_threshold: float = 0.3,
     ):
         self.extract_fn = extract_fn
-        self.importance_threshold = importance_threshold
 
     async def extract(
         self,
@@ -58,15 +58,13 @@ class MemoryExtractor:
 
         流程：
         1. 调用 extract_fn 让 LLM 输出 ExtractionCandidate 列表
-        2. 按 importance_threshold 过滤
-        3. 封装为 MemoryCard（status=PENDING, source=LLM_EXTRACTED）
-        4. 调用方决定是否调 LongTermMemoryStore.add_card 落库
+        2. 封装为 MemoryCard（status=PENDING, source=LLM_EXTRACTED）
+        3. 调用方决定是否调 LongTermMemoryStore.add_card 落库
         """
         # TODO: 实现
         # 1. candidates = await self.extract_fn(messages)
-        # 2. 过滤 importance < threshold
-        # 3. 为每个 candidate 生成 uuid，封装为 MemoryCard
-        # 4. 返回 list[MemoryCard]
+        # 2. 为每个 candidate 生成 uuid，封装为 MemoryCard
+        # 3. 返回 list[MemoryCard]
         logger.info(
             f"提取记忆候选: user={user_id}, agent={agent_id}, messages={len(messages)}"
         )

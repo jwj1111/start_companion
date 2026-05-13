@@ -18,7 +18,7 @@
 """
 
 from memory.relational.base import BaseCardStore
-from memory.schema import MemoryCard, MemoryCardStatus, MemoryCategory
+from memory.schema import MemoryCard, MemoryCardStatus
 
 
 class MysqlCardStore(BaseCardStore):
@@ -55,9 +55,7 @@ class MysqlCardStore(BaseCardStore):
         #   user_id VARCHAR(64) NOT NULL,
         #   agent_id VARCHAR(64) NOT NULL,
         #   content TEXT NOT NULL,
-        #   category VARCHAR(32) NOT NULL,
         #   tags JSON,
-        #   importance FLOAT,
         #   status VARCHAR(32) NOT NULL,
         #   source VARCHAR(32),
         #   source_session_id VARCHAR(64),
@@ -72,8 +70,7 @@ class MysqlCardStore(BaseCardStore):
         #   vector_id VARCHAR(64),
         #   metadata JSON,
         #   INDEX idx_user_agent (user_id, agent_id),
-        #   INDEX idx_user_status (user_id, status),
-        #   INDEX idx_user_category (user_id, category)
+        #   INDEX idx_user_status (user_id, status)
         # ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         raise NotImplementedError
 
@@ -102,7 +99,6 @@ class MysqlCardStore(BaseCardStore):
         user_id: str,
         agent_id: str | None = None,
         status: MemoryCardStatus | None = None,
-        category: MemoryCategory | None = None,
         tags: list[str] | None = None,
         limit: int = 50,
         offset: int = 0,

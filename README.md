@@ -18,12 +18,15 @@
 │                                                                       │
 │  ┌─────────────────────────────────────────────────────────────┐    │
 │  │                   LangGraph Orchestrator                      │    │
+│  │                                                               │    │
+│  │  route_input ── Context Providers ── 填充背景上下文(SP)       │    │
+│  │       │          (人设/档案/记忆)                              │    │
+│  │       ▼                                                       │    │
 │  │  ┌─────────┐                                                 │    │
 │  │  │  Main   │── ReAct ──┬── Tool: Screenshot & Vision         │    │
-│  │  │  Agent  │           ├── Tool: Voice (ASR/TTS)             │    │
-│  │  │         │           ├── Tool: Game Knowledge RAG          │    │
+│  │  │  Agent  │           ├── Tool: Game Knowledge RAG          │    │
 │  │  │         │           ├── Tool: Web Search                  │    │
-│  │  │         │           ├── Tool: Memory Read/Write           │    │
+│  │  │         │           ├── Tool: Memory Write                │    │
 │  │  │         │           ├── SubAgent: Emotion Analysis        │    │
 │  │  │         │           └── SubAgent: Game Strategy           │    │
 │  │  └─────────┘                                                 │    │
@@ -39,13 +42,14 @@
 ## 目录结构
 
 ```
-ai_companion/
+start_companion/
 ├── backend/                    # Python 后端
 │   ├── app/                    # 应用主入口
 │   ├── agents/                 # LangGraph Agent 定义
-│   ├── tools/                  # LangGraph Tools
+│   ├── context_providers/      # 背景上下文提供者（可插拔模块）
+│   ├── tools/                  # LangGraph Tools（实时交互）
 │   ├── models/                 # Model Provider 抽象层
-│   ├── memory/                 # 记忆层（短期/长期/向量）
+│   ├── memory/                 # 记忆层（档案/短期/长期）
 │   ├── presets/                # 开发者预设（角色/人设/策略）
 │   ├── custom/                 # 用户微调空间（运行时加载）
 │   ├── knowledge/              # 游戏知识库 & RAG

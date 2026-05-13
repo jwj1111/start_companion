@@ -7,7 +7,7 @@
 
 from abc import ABC, abstractmethod
 
-from memory.schema import MemoryCard, MemoryCardStatus, MemoryCategory
+from memory.schema import MemoryCard, MemoryCardStatus
 
 
 class BaseCardStore(ABC):
@@ -59,7 +59,6 @@ class BaseCardStore(ABC):
         user_id: str,
         agent_id: str | None = None,
         status: MemoryCardStatus | None = None,
-        category: MemoryCategory | None = None,
         tags: list[str] | None = None,
         limit: int = 50,
         offset: int = 0,

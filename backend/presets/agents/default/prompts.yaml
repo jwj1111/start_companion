@@ -16,8 +16,8 @@ memory_extraction_prompt: |
   对话内容:
   {{ conversation }}
 
-  请以JSON格式输出提取的记忆:
-  [{"content": "...", "category": "fact|preference|event", "importance": 0.0-1.0}]
+  请以JSON格式输出提取的记忆（每条只需 content 字段）:
+  [{"content": "用户喜欢枫原万叶"}, {"content": "用户不喜欢被说教"}]
 
 # === Memory Query Rewrite Prompt (记忆检索 query 改写，由 MemoryProvider 使用) ===
 memory_query_rewrite_prompt: |

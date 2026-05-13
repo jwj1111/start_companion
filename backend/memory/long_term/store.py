@@ -28,7 +28,6 @@ from loguru import logger
 from memory.schema import (
     MemoryCard,
     MemoryCardStatus,
-    MemoryCategory,
     MemorySearchResult,
 )
 from memory.vector_stores.base import BaseVectorStore
@@ -176,7 +175,6 @@ class LongTermMemoryStore:
         agent_id: str,
         query: str,
         limit: int = 10,
-        category: MemoryCategory | None = None,
         score_threshold: float = 0.5,
     ) -> list[MemorySearchResult]:
         """
@@ -186,7 +184,6 @@ class LongTermMemoryStore:
         - user_id（强制）
         - agent_id（强制）
         - status = ACTIVE（只召回生效中的）
-        - category（可选）
         - score >= score_threshold
         """
         # TODO: 实现
@@ -228,7 +225,7 @@ class LongTermMemoryStore:
         更新卡片内容。
 
         若 content 发生变化，需要重新 embed 并更新向量库。
-        若只是改 status/tags/importance，只更新关系库即可。
+        若只是改 status/tags，只更新关系库即可。
         """
         # TODO: 实现
         raise NotImplementedError

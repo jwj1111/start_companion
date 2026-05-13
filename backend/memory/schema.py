@@ -3,7 +3,11 @@
 
 设计参考：
 - KokoroMemo 的记忆卡片 + 收件箱审核机制
-- mem0 的多信号检索 + 重要性评分
+
+设计决策：
+- 不设 importance 字段：LLM 打分不稳定且无实际用途，提取质量靠 prompt 约束
+- 不设 category 字段：分类对检索无帮助（向量检索靠语义），对用户展示意义不大
+- 保留 tags：自由标签比固定分类更灵活，用户可自行编辑
 """
 
 from __future__ import annotations
@@ -21,19 +25,6 @@ class MemoryCardStatus(str, Enum):
     ACTIVE = "active"        # 生效中，会参与召回
     ARCHIVED = "archived"    # 已归档，不再参与召回但保留历史
     REJECTED = "rejected"    # 用户已拒绝（比 archive 更强的信号，不再自动提取相同内容）
-
-
-class MemoryCategory(str, Enum):
-    """记忆分类 —— 便于检索过滤与用户管理。"""
-
-    FACT = "fact"                  # 客观事实："用户叫 Alice"
-    PREFERENCE = "preference"      # 偏好："喜欢用枫原万叶"
-    RELATION = "relation"          # 关系："把 AI 当朋友 / 叫 AI 老板"
-    EVENT = "event"                # 重要事件："5月3日一起通关深渊"
-    EMOTION = "emotion"            # 情感印象："情绪低落时喜欢被安慰"
-    TABOO = "taboo"                # 禁忌："不喜欢被说教"
-    GAME_STATE = "game_state"      # 游戏状态快照："主力阵容是 XX"
-    OTHER = "other"                # 其他
 
 
 class MemorySource(str, Enum):
@@ -63,9 +54,7 @@ class MemoryCard:
 
     # === 内容 ===
     content: str                            # 记忆文本
-    category: MemoryCategory = MemoryCategory.OTHER
-    tags: list[str] = field(default_factory=list)
-    importance: float = 0.5                 # 0.0 - 1.0
+    tags: list[str] = field(default_factory=list)  # 自由标签，便于用户管理
 
     # === 状态 ===
     status: MemoryCardStatus = MemoryCardStatus.PENDING
@@ -89,8 +78,6 @@ class MemoryCard:
     expires_at: datetime | None = None      # None 表示永不过期
 
     # === 向量引用 ===
-    # 向量实际存在向量数据库中，这里只存引用 ID
-    # 通常与 id 相同，但允许一张卡对应多个向量版本
     vector_id: str = ""
 
     # === 自由扩展 ===
@@ -100,15 +87,13 @@ class MemoryCard:
         """
         构造写入向量库的 payload。
 
-        只包含检索时需要过滤的字段，其他完整信息在 SQLite 里。
+        只包含检索时需要过滤的字段，其他完整信息在关系库里。
         """
         return {
             "card_id": self.id,
             "user_id": self.user_id,
             "agent_id": self.agent_id,
-            "category": self.category.value,
             "status": self.status.value,
-            "importance": self.importance,
             "tags": self.tags,
         }
 
@@ -119,4 +104,3 @@ class MemorySearchResult:
 
     card: MemoryCard
     relevance_score: float                  # 语义相似度 0.0 - 1.0
-    # 后续可加入 BM25 分数、实体匹配分数等多信号字段

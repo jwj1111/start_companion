@@ -63,7 +63,6 @@
 from memory.schema import (
     MemoryCard,
     MemoryCardStatus,
-    MemoryCategory,
     MemorySource,
     MemorySearchResult,
 )
@@ -72,7 +71,6 @@ from memory.manager import MemoryManager
 __all__ = [
     "MemoryCard",
     "MemoryCardStatus",
-    "MemoryCategory",
     "MemorySource",
     "MemorySearchResult",
     "MemoryManager",

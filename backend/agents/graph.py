@@ -2,10 +2,9 @@
 LangGraph 主编排图。
 
 主 Agent 使用 ReAct 模式：
-1. 接收用户输入（文本 / 语音转写结果）
-2. 按需调用 tools（截图、记忆、搜索 等）
-3. 生成带有情感 / 动作元数据的回复
-4. 在需要时路由到子 Agent（情感分析、游戏策略 等）
+1. route_input: 遍历 Context Providers 收集背景上下文
+2. call_main_agent: 按需调用 tools（截图、游戏信息、记忆写入）
+3. process_output: 输出后处理（情感分析、记忆提取、Live2D 映射）
 """
 
 from langgraph.graph import StateGraph, END

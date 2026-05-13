@@ -4,14 +4,13 @@
 职责：
 - 组装 档案 / 短期 / 长期 / 门控 / 提取器 各子组件
 - 绑定 (user_id, agent_id)，确保所有操作在用户隔离下进行
-- 暴露给上层 (LangGraph 节点 / API) 的简洁接口
+- 暴露给上层 (Context Provider / API) 的简洁接口
 
-长期记忆读取路径（核心流程）：
-    route_input 节点调用本类完成以下工作：
+长期记忆读取路径（由 MemoryProvider 调用）：
     1. Gate 判断本轮是否需要检索 → should_recall()
-    2. 条件改写 query（代词/指代时改写）→ rewrite_query_if_needed()
+    2. Gate 通过 → 一律改写 query → rewrite_query()
     3. 向量检索 top-K → recall()
-    4. 结果注入 System Prompt
+    4. 结果由 MemoryProvider 格式化后注入 SP
 
 长期记忆写入路径：
     - session_end 时：extract_and_store() 批量提取 + 去重合并
@@ -20,10 +19,10 @@
 使用示例：
     manager = await MemoryManager.for_user(user_id="alice", agent_id="default")
 
-    # 读取侧（route_input 中）
+    # 读取侧（MemoryProvider 中）
     profile_text = await manager.get_profile_text()
     if await manager.should_recall(user_message):
-        query = await manager.rewrite_query_if_needed(user_message, recent_messages)
+        query = await manager.rewrite_query(user_message, recent_messages)
         memories = await manager.recall(query, limit=5)
 
     # 写入侧（session_end / process_output 中）
@@ -33,7 +32,7 @@
 
 from __future__ import annotations
 
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.messages import BaseMessage
 from loguru import logger
 
 from memory.schema import MemoryCard, MemorySearchResult
@@ -44,14 +43,6 @@ from memory.retrieval_gate import BaseRetrievalGate, RuleBasedGate
 from memory.extractor import MemoryExtractor
 from memory.profile.base import BaseProfileStore
 from memory.profile.updater import ProfileUpdater
-
-
-# 触发 query 改写的指代词（包含这些词时说明用户原文不适合直接当检索 query）
-_REWRITE_TRIGGER_PATTERNS: set[str] = {
-    "上次", "那个", "之前", "这个", "它", "他们",
-    "那件事", "你说的", "我说过", "当时", "那天",
-    "又", "还是", "一样",
-}
 
 
 class MemoryManager:
@@ -106,7 +97,7 @@ class MemoryManager:
         )
 
     # ================================================================
-    # 长期记忆卡片：读取（Gate → 条件改写 → 检索）
+    # 长期记忆卡片：读取（Gate → 改写 → 检索）
     # ================================================================
 
     async def should_recall(self, user_message: str) -> bool:
@@ -117,38 +108,30 @@ class MemoryManager:
         """
         return await self.retrieval_gate.should_retrieve(user_message)
 
-    async def rewrite_query_if_needed(
+    async def rewrite_query(
         self,
         user_message: str,
         recent_messages: list[BaseMessage] | None = None,
     ) -> str:
         """
-        条件改写 query —— 当用户消息含代词/指代时，用 auxiliary 模型改写为适合检索的 query。
+        改写 query —— 用 auxiliary 模型将用户消息改写为适合向量检索的 query。
 
-        策略：
-        - 不含指代词 → 直接返回原文（零延迟）
-        - 含指代词但没有 rewrite_fn → 退化为原文（降级容错）
-        - 含指代词且有 rewrite_fn → 调用 auxiliary 模型改写
+        Gate 通过后一律调用此方法（不判断有没有指代词）。
+        理由：即使没有指代词，改写也能去除噪声词、提取关键语义，提升检索质量。
+
+        降级容错：如果 rewrite_fn 未配置，退化为直接使用原文。
 
         Args:
             user_message: 用户当前消息
-            recent_messages: 最近几轮对话（提供上下文帮助改写），建议传 3-5 轮
+            recent_messages: 最近几轮对话（提供上下文帮助改写），建议传 3-6 轮
 
         Returns:
             适合向量检索的 query 文本
         """
-        # 检查是否需要改写
-        needs_rewrite = any(p in user_message for p in _REWRITE_TRIGGER_PATTERNS)
-
-        if not needs_rewrite:
-            return user_message
-
-        # 需要改写但没有 rewrite_fn → 降级
         if self.rewrite_fn is None:
-            logger.warning("需要改写 query 但 rewrite_fn 未配置，使用原文")
+            logger.debug("rewrite_fn 未配置，使用原文作为检索 query")
             return user_message
 
-        # 调用 auxiliary 模型改写
         context = recent_messages or []
         rewritten = await self.rewrite_fn(user_message, context)
         logger.debug(f"Query 改写: '{user_message}' → '{rewritten}'")

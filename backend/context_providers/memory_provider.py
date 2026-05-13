@@ -5,7 +5,7 @@ MemoryProvider —— 提供从长期记忆中召回的相关卡片。
 
 读取流程：
 1. Gate 判断（RuleBasedGate，零延迟规则匹配）
-2. 条件改写 query（含指代词时用 auxiliary 模型改写，否则用原文）
+2. Gate 通过 → 一律用 auxiliary 模型改写 query（结合上下文优化检索质量）
 3. 向量检索 top-K
 4. 格式化为文本
 
@@ -30,6 +30,7 @@ class MemoryProvider(BaseContextProvider):
     长期记忆上下文提供者。
 
     内部自带 Gate，should_run() 中完成 Gate 判断。
+    Gate 通过后一律改写 query 再检索。
     """
 
     name = "memory"
@@ -58,7 +59,9 @@ class MemoryProvider(BaseContextProvider):
 
     async def run(self, state: dict[str, Any]) -> str | None:
         """
-        执行长期记忆检索：条件改写 query → 向量检索 → 格式化。
+        执行长期记忆检索：改写 query → 向量检索 → 格式化。
+
+        Gate 通过后一律改写 query（不判断有没有指代词）。
 
         返回格式化后的记忆文本，或 None（无相关记忆时）。
         """
@@ -69,10 +72,10 @@ class MemoryProvider(BaseContextProvider):
         # agent_id = state["agent_id"]
         # manager = await MemoryManager.for_user(user_id, agent_id, self.agent_config)
         #
-        # # 条件改写 query
+        # # 改写 query（Gate 通过就一律改写）
         # last_msg = self._extract_last_user_message(state["messages"])
         # recent_context = state["messages"][-6:]
-        # query = await manager.rewrite_query_if_needed(last_msg, recent_context)
+        # query = await manager.rewrite_query(last_msg, recent_context)
         #
         # # 向量检索
         # limit = self.agent_config.get("memory", {}).get("retrieval_count", 5)
@@ -82,10 +85,7 @@ class MemoryProvider(BaseContextProvider):
         #     return None
         #
         # # 格式化
-        # lines = []
-        # for r in results:
-        #     category = r.card.category.value if r.card.category else "other"
-        #     lines.append(f"- [{category}] {r.card.content}")
+        # lines = [f"- {r.card.content}" for r in results]
         # return "\n".join(lines)
 
         return None  # 占位，待实现

@@ -2,7 +2,7 @@
 记忆卡片 API —— 让用户可以审核、编辑、手动管理自己的记忆。
 
 端点清单：
-- GET    /memory/cards                列出卡片（按 status/category 过滤，分页）
+- GET    /memory/cards                列出卡片（按 status 过滤，分页）
 - GET    /memory/cards/{id}           获取单张卡片
 - POST   /memory/cards                手动添加一张卡片（直接 ACTIVE）
 - PATCH  /memory/cards/{id}           编辑卡片内容 / 状态 / 标签
@@ -17,7 +17,7 @@
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
-from memory.schema import MemoryCardStatus, MemoryCategory
+from memory.schema import MemoryCardStatus
 
 router = APIRouter()
 
@@ -28,17 +28,13 @@ class MemoryCardCreate(BaseModel):
     """手动创建卡片请求体。"""
     agent_id: str
     content: str
-    category: MemoryCategory = MemoryCategory.OTHER
     tags: list[str] = []
-    importance: float = 0.5
 
 
 class MemoryCardUpdate(BaseModel):
     """编辑卡片请求体（所有字段可选）。"""
     content: str | None = None
-    category: MemoryCategory | None = None
     tags: list[str] | None = None
-    importance: float | None = None
     status: MemoryCardStatus | None = None
 
 
@@ -48,9 +44,7 @@ class MemoryCardResponse(BaseModel):
     user_id: str
     agent_id: str
     content: str
-    category: str
     tags: list[str]
-    importance: float
     status: str
     source: str
     user_edited: bool
@@ -67,11 +61,10 @@ async def list_cards(
     user_id: str,                               # TODO: 从鉴权中取，不要让前端传
     agent_id: str | None = None,
     status: MemoryCardStatus | None = None,
-    category: MemoryCategory | None = None,
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
-    """列出当前用户的记忆卡片，支持按状态 / 分类 / Agent 过滤。"""
+    """列出当前用户的记忆卡片，支持按状态 / Agent 过滤。"""
     # TODO: 调用 MemoryManager.long_term.list_cards() 并序列化
     raise NotImplementedError
 

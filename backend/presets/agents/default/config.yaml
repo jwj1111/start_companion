@@ -8,6 +8,7 @@ model_roles:
   memory_extract: auxiliary  # 记忆提取用轻量模型
   emotion: auxiliary       # 情感分析用轻量模型
   query_rewrite: auxiliary  # 记忆检索 query 改写用轻量模型
+  game_info_summarize: auxiliary  # 游戏信息搜索结果总结用轻量模型
 
 # === System Prompt 组装模式 ===
 # "unified": 所有上下文拼成一个 SystemMessage（兼容性最好）
@@ -41,18 +42,19 @@ conversation:
 # === Tool 使用策略 ===
 # 注意：长期记忆的读取由 MemoryProvider 在入口处完成，不走 tool。
 # memory_write 仍作为 tool 保留，让模型可以在对话中主动记录重要信息。
+# game_info 合并了知识库搜索和联网搜索，内部自动选择来源并用 auxiliary 模型总结。
 tools:
   enabled:
     - screenshot
     - memory_write
-    - knowledge_search
-    - web_search
+    - game_info
   # 某些 tool 的特殊配置
   screenshot:
     auto_trigger_on_silence: true
     silence_threshold_seconds: 60
-  web_search:
-    prefer_knowledge_base: true   # 优先使用知识库，找不到再搜索
+  game_info:
+    prefer_knowledge_base: true   # 有知识库时优先使用，没有或查不到再联网搜索
+    summary_max_length: 200       # auxiliary 总结的最大字数
 
 # === 响应格式 ===
 response:

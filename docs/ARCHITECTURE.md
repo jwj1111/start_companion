@@ -150,7 +150,7 @@ SP 由 `context_parts` 动态拼接，支持两种模式（配置切换）：
 ```
 ┌──────────────────────────────────────────────────────────┐
 │ 用户档案 (Profile)                                       │
-│   存储: 关系型 DB（EAV 模式）                            │
+│   存储: 关系型 DB，JSON 列（一行一用户）                 │
 │   读取: ProfileProvider → 每轮全量注入 SP                │
 │   写入: session_end 时 LLM 提取更新                      │
 │   参考: EVE 128 记忆槽 + KokoroMemo 状态板              │
@@ -178,7 +178,7 @@ SP 由 `context_parts` 动态拼接，支持两种模式（配置切换）：
 [route_input 节点]
     │
     ├─ ProfileProvider
-    │   └─ get_profile_text() → 全量 EAV 读取 → 注入 SP
+    │   └─ get_profile() → 一行查询 JSON → 注入 SP
     │
     ├─ MemoryProvider
     │   ├─ RuleBasedGate: 含引用词才触发，其余不搜
@@ -210,7 +210,7 @@ memory/
 ├── extractor.py               # 从对话提取候选记忆
 ├── retrieval_gate.py          # 检索门控（RuleBasedGate）
 ├── profile/                   # 用户档案
-│   ├── base.py                # EAV 抽象基类
+│   ├── base.py                # 抽象基类（JSON 列模式）
 │   ├── store.py               # SQLite 实现
 │   └── updater.py             # session_end 提取更新
 ├── short_term/

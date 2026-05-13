@@ -1,15 +1,17 @@
 """
 用户档案的关系型存储实现。
 
-与 memory_cards 表共用同一个数据库连接。
+与 memory_cards 表共用同一个数据库文件。
 表名: user_profiles
+存储方式: JSON 列（一行一用户，data 列存完整档案 JSON）
 
 注意：该实现同时适用于 SQLite 和 MySQL，
 SQL 方言差异通过占位符抽象（? vs %s）处理。
 """
 
-from memory.profile.base import BaseProfileStore, ProfileField
-from memory.schema import MemoryCardStatus
+from typing import Any
+
+from memory.profile.base import BaseProfileStore
 
 
 class RelationalProfileStore(BaseProfileStore):
@@ -29,58 +31,55 @@ class RelationalProfileStore(BaseProfileStore):
     async def init_schema(self) -> None:
         """建表。"""
         # TODO: CREATE TABLE IF NOT EXISTS user_profiles (
-        #   user_id TEXT NOT NULL,
-        #   agent_id TEXT NOT NULL,
-        #   field TEXT NOT NULL,
-        #   value TEXT,
-        #   source TEXT DEFAULT 'llm_extracted',
+        #   user_id    TEXT NOT NULL,
+        #   agent_id   TEXT NOT NULL,
+        #   data       TEXT NOT NULL DEFAULT '{}',
         #   updated_at DATETIME,
-        #   PRIMARY KEY (user_id, agent_id, field)
+        #   PRIMARY KEY (user_id, agent_id)
         # );
         raise NotImplementedError
 
-    async def get_all(
+    async def get_profile(
         self, user_id: str, agent_id: str
-    ) -> dict[str, ProfileField]:
-        # TODO: SELECT * FROM user_profiles WHERE user_id=? AND agent_id=?
+    ) -> dict[str, Any]:
+        # TODO: SELECT data FROM user_profiles WHERE user_id=? AND agent_id=?
+        #       → json.loads(row["data"]) 或 {} 如果不存在
         raise NotImplementedError
 
-    async def get_field(
-        self, user_id: str, agent_id: str, field: str
-    ) -> ProfileField | None:
-        # TODO: SELECT * FROM user_profiles WHERE user_id=? AND agent_id=? AND field=?
-        raise NotImplementedError
-
-    async def set_field(
-        self,
-        user_id: str,
-        agent_id: str,
-        field: str,
-        value: str,
-        source: str = "llm_extracted",
-    ) -> None:
-        # TODO: INSERT OR REPLACE INTO user_profiles (user_id, agent_id, field, value, source, updated_at)
-        #       VALUES (?, ?, ?, ?, ?, NOW())
-        raise NotImplementedError
-
-    async def set_fields(
+    async def update_profile(
         self,
         user_id: str,
         agent_id: str,
         updates: dict[str, str],
-        source: str = "llm_extracted",
     ) -> None:
-        # TODO: 批量 UPSERT，建议在事务中执行
+        # TODO:
+        # 1. current = await self.get_profile(user_id, agent_id)
+        # 2. merged = {**current, **updates}
+        # 3. INSERT OR REPLACE INTO user_profiles (user_id, agent_id, data, updated_at)
+        #    VALUES (?, ?, json.dumps(merged), NOW())
+        raise NotImplementedError
+
+    async def replace_profile(
+        self,
+        user_id: str,
+        agent_id: str,
+        data: dict[str, str],
+    ) -> None:
+        # TODO: INSERT OR REPLACE INTO user_profiles (user_id, agent_id, data, updated_at)
+        #       VALUES (?, ?, json.dumps(data), NOW())
         raise NotImplementedError
 
     async def delete_field(
         self, user_id: str, agent_id: str, field: str
     ) -> bool:
-        # TODO: DELETE FROM user_profiles WHERE user_id=? AND agent_id=? AND field=?
+        # TODO:
+        # 1. current = await self.get_profile(user_id, agent_id)
+        # 2. if field in current: del current[field]
+        # 3. 写回
         raise NotImplementedError
 
     async def clear_all(
         self, user_id: str, agent_id: str
-    ) -> int:
+    ) -> bool:
         # TODO: DELETE FROM user_profiles WHERE user_id=? AND agent_id=?
         raise NotImplementedError

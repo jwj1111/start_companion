@@ -1,36 +1,24 @@
 """
 用户档案存储的抽象基类。
 
-采用 EAV（Entity-Attribute-Value）模式：
-- 字段完全自由，加新字段不用改表结构
+采用 JSON 列模式（一行一用户，data 列存 JSON）：
+- 读写都是一行操作，比 EAV 简单高效
+- JSON 内字段自由，加新字段不用改表结构
 - 不同 Agent 可以有不同字段集
-- 一个 (user_id, agent_id, field) 只有一个最新值
 
 表结构：
     user_profiles (
         user_id     TEXT NOT NULL,
         agent_id    TEXT NOT NULL,
-        field       TEXT NOT NULL,       -- 字段名: "nickname" / "birthday" / ...
-        value       TEXT,                -- 字段值: "老板" / "5月3日" / ...
-        source      TEXT,                -- "llm_extracted" / "user_manual"
+        data        TEXT NOT NULL DEFAULT '{}',   -- JSON: {"nickname": "老板", ...}
         updated_at  DATETIME,
-        PRIMARY KEY (user_id, agent_id, field)
+        PRIMARY KEY (user_id, agent_id)
     )
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
-
-
-@dataclass
-class ProfileField:
-    """档案中的一个字段。"""
-    field: str
-    value: str
-    source: str         # "llm_extracted" / "user_manual" / "system"
-    updated_at: datetime
 
 
 class BaseProfileStore(ABC):
@@ -46,48 +34,44 @@ class BaseProfileStore(ABC):
     # === 读取 ===
 
     @abstractmethod
-    async def get_all(
+    async def get_profile(
         self, user_id: str, agent_id: str
-    ) -> dict[str, ProfileField]:
+    ) -> dict[str, Any]:
         """
         获取某用户对某 Agent 的完整档案。
 
-        返回值：{field_name: ProfileField} 字典
+        返回值：字段字典，如 {"nickname": "老板", "birthday": "5月3日"}
+        空档案返回 {}。
         """
-        ...
-
-    @abstractmethod
-    async def get_field(
-        self, user_id: str, agent_id: str, field: str
-    ) -> ProfileField | None:
-        """获取单个字段值。"""
         ...
 
     # === 写入 ===
 
     @abstractmethod
-    async def set_field(
-        self,
-        user_id: str,
-        agent_id: str,
-        field: str,
-        value: str,
-        source: str = "llm_extracted",
-    ) -> None:
-        """
-        设置一个字段值（UPSERT：存在则覆盖，不存在则创建）。
-        """
-        ...
-
-    @abstractmethod
-    async def set_fields(
+    async def update_profile(
         self,
         user_id: str,
         agent_id: str,
         updates: dict[str, str],
-        source: str = "llm_extracted",
     ) -> None:
-        """批量设置多个字段（原子操作）。"""
+        """
+        合并更新档案字段。
+
+        将 updates 中的 key-value 合并到现有档案中（已有则覆盖，新增则追加）。
+        不影响 updates 中未提及的字段。
+        """
+        ...
+
+    @abstractmethod
+    async def replace_profile(
+        self,
+        user_id: str,
+        agent_id: str,
+        data: dict[str, str],
+    ) -> None:
+        """
+        整体替换档案（用户手动编辑场景）。
+        """
         ...
 
     # === 删除 ===
@@ -96,14 +80,14 @@ class BaseProfileStore(ABC):
     async def delete_field(
         self, user_id: str, agent_id: str, field: str
     ) -> bool:
-        """删除一个字段。"""
+        """删除一个字段（从 JSON 中移除该 key）。"""
         ...
 
     @abstractmethod
     async def clear_all(
         self, user_id: str, agent_id: str
-    ) -> int:
-        """清空某用户的全部档案，返回删除条数。"""
+    ) -> bool:
+        """清空某用户的全部档案。"""
         ...
 
     # === 工具方法 ===
@@ -119,12 +103,11 @@ class BaseProfileStore(ABC):
             - 称呼: 老板
             - 生日: 5月3日
             - 最爱角色: 枫原万叶
-            - 当前心情: 开心
         """
-        fields = await self.get_all(user_id, agent_id)
-        if not fields:
+        data = await self.get_profile(user_id, agent_id)
+        if not data:
             return ""
         lines = ["关于用户："]
-        for name, pf in fields.items():
-            lines.append(f"- {name}: {pf.value}")
+        for key, value in data.items():
+            lines.append(f"- {key}: {value}")
         return "\n".join(lines)

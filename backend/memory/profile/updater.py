@@ -68,7 +68,7 @@ class ProfileUpdater:
         # 1. current_text = await self.profile_store.to_prompt_text(user_id, agent_id)
         # 2. updates = await self.extract_fn(session_messages, current_text)
         # 3. if updates:
-        #        await self.profile_store.set_fields(user_id, agent_id, updates, source="llm_extracted")
+        #        await self.profile_store.update_profile(user_id, agent_id, updates)
         #        logger.info(f"档案已更新: user={user_id}, fields={list(updates.keys())}")
         # 4. return updates
         logger.debug(f"session_end 档案提取: user={user_id}, agent={agent_id}")

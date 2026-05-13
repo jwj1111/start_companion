@@ -26,9 +26,8 @@ context_providers:
 
 # === 记忆配置 ===
 memory:
-  # Gate 参数（控制哪些消息触发长期记忆检索）
-  gate_min_chars: 4          # 短于此字符数的消息不触发检索
-  gate_default_retrieve: true  # 规则都没命中时是否默认检索
+  # Gate 策略：默认不搜，含引用词才触发
+  # 引用词集合在 RuleBasedGate.REFERENCE_PATTERNS 中定义
   # 检索参数
   retrieval_count: 5           # 每次检索返回的最大卡片数
   score_threshold: 0.5         # 最低相似度阈值

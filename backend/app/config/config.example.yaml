@@ -124,9 +124,7 @@ memory:
       # 中间地带（0.60~0.85）→ 跳过，宁可漏记也不重复
 
   retrieval_gate:
-    strategy: rule_based
-    min_chars: 5
-    default_retrieve: true
+    strategy: rule_based          # 含引用词才触发，其余不搜
 
   extraction:
     trigger: on_summary_compress

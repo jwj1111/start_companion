@@ -4,8 +4,8 @@ MemoryProvider —— 提供从长期记忆中召回的相关卡片。
 属于 DYNAMIC 组：每轮根据 Gate 判断是否检索，结果每轮可能不同。
 
 读取流程：
-1. Gate 判断（RuleBasedGate，零延迟规则匹配）
-2. Gate 通过 → 一律用 auxiliary 模型改写 query（结合上下文优化检索质量）
+1. Gate 判断（引用词触发 / 新 session 首轮触发，其余不搜）
+2. Gate 通过 → auxiliary 模型改写 query（过 Gate 的消息都含指代，需要改写）
 3. 向量检索 top-K
 4. 格式化为文本
 
@@ -38,19 +38,13 @@ class MemoryProvider(BaseContextProvider):
 
     def __init__(self, agent_config: dict[str, Any]):
         super().__init__(agent_config)
-        self._gate = RuleBasedGate(
-            min_chars=agent_config.get("memory", {}).get("gate_min_chars", 4),
-            default_retrieve=agent_config.get("memory", {}).get("gate_default_retrieve", True),
-        )
+        self._gate = RuleBasedGate()
 
     async def should_run(self, state: dict[str, Any]) -> bool:
         """
         通过 Gate 判断本轮是否需要检索长期记忆。
 
-        零延迟（纯规则匹配）：
-        - 短消息/问候 → False
-        - 含引用词 → True
-        - 其余 → 默认 True
+        含引用词（"上次""记得""之前"等）→ True，其余 → False。
         """
         last_msg = self._extract_last_user_message(state.get("messages", []))
         if not last_msg:
@@ -61,7 +55,7 @@ class MemoryProvider(BaseContextProvider):
         """
         执行长期记忆检索：改写 query → 向量检索 → 格式化。
 
-        Gate 通过后一律改写 query（不判断有没有指代词）。
+        Gate 通过后一律改写 query（过 Gate 的消息都含指代/引用，原文不适合直搜）。
 
         返回格式化后的记忆文本，或 None（无相关记忆时）。
         """
@@ -72,7 +66,7 @@ class MemoryProvider(BaseContextProvider):
         # agent_id = state["agent_id"]
         # manager = await MemoryManager.for_user(user_id, agent_id, self.agent_config)
         #
-        # # 改写 query（Gate 通过就一律改写）
+        # # 改写 query
         # last_msg = self._extract_last_user_message(state["messages"])
         # recent_context = state["messages"][-6:]
         # query = await manager.rewrite_query(last_msg, recent_context)

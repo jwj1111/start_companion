@@ -1,10 +1,11 @@
 # ============================================================
-# START Companion 配置文件
+# START Companion 全局配置文件
 # 复制为 config.yaml 并根据需要修改
 #
 # 职责划分：
-#   config.yaml  → 结构化配置（选型、策略、阈值等），可提交 Git
-#   .env         → 敏感凭据（API Key、密码、endpoint），不提交 Git
+#   本文件 (config.yaml) → 基础设施配置（模型池、存储连接、服务地址）
+#   presets/agents/xxx/config.yaml → Agent 行为配置（记忆策略、tool开关、SP模式）
+#   .env → 敏感凭据（API Key、密码），不提交 Git
 #
 # 密钥在这里不写！通过 api_key_env / base_url_env 引用 .env 中的变量名。
 # ============================================================
@@ -22,8 +23,8 @@ app:
 # === 模型池 ===
 # 声明项目中所有可用的模型实例。
 # provider 只有四种：openai / anthropic / ollama / huggingface
-#   - openai: 覆盖所有 OpenAI 兼容 API（含混元、DeepSeek、智谱、司内 API 等）
-#   - anthropic: Claude 系列（协议不兼容 OpenAI）
+#   - openai: 覆盖所有 OpenAI 兼容 API（含混元、DeepSeek、智谱等）
+#   - anthropic: Claude 系列
 #   - ollama: 本地 Ollama 模型
 #   - huggingface: 本地 HuggingFace 模型（仅 embedding）
 #
@@ -49,10 +50,10 @@ model_pool:
     api_key_env: OPENAI_EMBED_API_KEY
     base_url_env: OPENAI_EMBED_BASE_URL
 
-  # --- 示例：接腾讯混元（OpenAI 兼容，provider 就写 openai）---
-  # hunyuan_pro:
+  # --- 示例：接腾讯混元 ---
+  # hunyuan_instruct:
   #   provider: openai
-  #   model: hunyuan-pro
+  #   model: hunyuan-2.0-instruct-20251111
   #   api_key_env: HUNYUAN_API_KEY
   #   base_url_env: HUNYUAN_BASE_URL
 
@@ -83,19 +84,15 @@ model_pool:
 
 # === 角色映射 ===
 # 声明每种用途使用模型池中的哪个实例。
-# 角色名可自由定义，以下四个是框架内置会用到的。
-# Agent 级别可在 presets/agents/xxx/config.yaml 中覆盖。
+# Agent 级别不再重复定义角色映射，统一在此管理。
 model_roles:
-  main: gpt4o                             # 主对话
-  vision: gpt4o                           # 截图分析（需要支持图片输入的模型）
-  auxiliary: gpt4o_mini                   # 辅助任务（摘要、情感分析、记忆提取）
-  embedding: openai_embed                 # 向量嵌入（记忆 + 知识库共用）
-  # 自由扩展：
-  # main_fallback: gpt4o_mini            # 主模型降级
-  # embedding_knowledge: bge_zh          # 知识库专用 embedding
+  main: gpt4o                    # 主对话
+  vision: gpt4o                  # 截图分析
+  auxiliary: gpt4o_mini          # 辅助任务（摘要、情感分析、记忆提取、query改写、游戏信息总结）
+  embedding: openai_embed        # 向量嵌入
 
-# === 记忆层 ===
-memory:
+# === 存储连接 ===
+storage:
   vector_store:
     type: qdrant                          # qdrant / chroma / milvus
     # url 和 api_key 放 .env
@@ -103,42 +100,18 @@ memory:
     knowledge_collection: "game_knowledge"
 
   relational:
-    type: sqlite                          # sqlite（开发） / mysql（正式）
+    type: sqlite                          # sqlite / mysql
     sqlite_path: "data/companion.db"
     # MySQL 连接信息放 .env
-
-  short_term:
-    turns_threshold: 20
-    keep_recent_turns: 10
-    summarize_model_role: auxiliary
-
-  long_term:
-    importance_threshold: 0.3
-    auto_approve_extracted: false
-    default_recall_limit: 5
-    score_threshold: 0.5
-    # 去重合并策略（session_end 写入时）
-    deduplication:
-      merge_threshold: 0.85               # >= 此值 → 替换旧卡（同一条信息的更新版本）
-      add_threshold: 0.60                 # < 此值 → 新增卡片（全新记忆）
-      # 中间地带（0.60~0.85）→ 跳过，宁可漏记也不重复
-
-  retrieval_gate:
-    strategy: rule_based          # 含引用词才触发，其余不搜
-
-  extraction:
-    trigger: on_summary_compress
 
 # === 语音服务 ===
 voice:
   asr:
-    provider: whisper_api                 # whisper_api / whisper_local / tencent_asr / custom_api
+    provider: whisper_api                 # whisper_api / whisper_local / custom_api
     model: whisper-1
     language: zh
-    # api_key / base_url 放 .env
-
   tts:
-    provider: edge_tts                    # edge_tts / openai_tts / tencent_tts / custom_api
+    provider: edge_tts                    # edge_tts / openai_tts / custom_api
     voice_id: "zh-CN-XiaoxiaoNeural"
     speed: 1.0
 
@@ -147,7 +120,6 @@ services:
   web_search:
     provider: tavily
     # api_key 放 .env
-
   screenshot:
     enabled: true
     interval_seconds: 5

@@ -1,60 +1,54 @@
 # Agent Behavior Configuration
-
-# === 模型使用配置 ===
-# 此 agent 使用哪些模型角色（映射到 settings 中的模型配置）
-model_roles:
-  conversation: main       # 主对话用 main 模型
-  vision: vision           # 截图分析用 vision 模型
-  memory_extract: auxiliary  # 记忆提取用轻量模型
-  emotion: auxiliary       # 情感分析用轻量模型
-  query_rewrite: auxiliary  # 记忆检索 query 改写用轻量模型
-  game_info_summarize: auxiliary  # 游戏信息搜索结果总结用轻量模型
+# 本文件定义单个 Agent 的行为策略。
+# 模型选型在全局 config.yaml 的 model_pool / model_roles 中管理，此处不重复。
 
 # === System Prompt 组装模式 ===
 # "unified": 所有上下文拼成一个 SystemMessage（兼容性最好）
 # "split":   STATIC 组和 DYNAMIC 组分成两个 SystemMessage（固定部分可利用 prompt caching）
-# 两种模式都保留，方便测试后选定
 sp_mode: unified
 
 # === Context Providers 配置 ===
-# 可插拔的背景上下文提供者，新增模块只需在 context_providers/ 下加文件并注册
 context_providers:
-  # 可以在此禁用特定 provider（取消注释即可）
   disabled: []
     # - memory     # 禁用长期记忆召回
     # - profile    # 禁用用户档案
 
-# === 记忆配置 ===
+# === 短期记忆 ===
+short_term:
+  keep_recent_turns: 15          # 上下文始终保留最近 15 轮原文
+  compress_batch: 15             # 每积累 15 轮新内容，压缩为滚动摘要
+  # 触发阈值 = keep_recent_turns + compress_batch = 30
+
+# === 长期记忆 ===
 memory:
   # Gate 策略：默认不搜，含引用词才触发
-  # 引用词集合在 RuleBasedGate.REFERENCE_PATTERNS 中定义
-  # 检索参数
-  retrieval_count: 5           # 每次检索返回的最大卡片数
-  score_threshold: 0.5         # 最低相似度阈值
-
-# === 对话策略 ===
-conversation:
-  max_history_in_context: 20    # 上下文中保留最近N轮对话
-  enable_auto_screenshot: true   # 是否自动定时截图
-  screenshot_interval: 30        # 自动截图间隔(秒)
+  retrieval_count: 5             # 每次检索返回的最大卡片数
+  score_threshold: 0.45          # 最低余弦相似度阈值
+  auto_approve: false            # 新提取的卡片是否自动审核通过
+  # 去重合并
+  dedup_merge_threshold: 0.85    # >= 此值 → 替换旧卡
+  dedup_add_threshold: 0.60      # < 此值 → 新增卡片
+  # 中间地带 → 跳过
 
 # === Tool 使用策略 ===
-# 记忆读写都不走 tool：读取由 MemoryProvider 负责，写入在 session_end 自动提取。
-# game_info 合并了知识库搜索和联网搜索，内部自动选择来源并用 auxiliary 模型总结。
 tools:
   enabled:
     - screenshot
     - game_info
-  # 某些 tool 的特殊配置
   screenshot:
     auto_trigger_on_silence: true
     silence_threshold_seconds: 60
   game_info:
-    prefer_knowledge_base: true   # 有知识库时优先使用，没有或查不到再联网搜索
-    summary_max_length: 200       # auxiliary 总结的最大字数
+    prefer_knowledge_base: true
+    summary_max_length: 200
+
+# === 对话策略 ===
+conversation:
+  enable_auto_screenshot: true
+  screenshot_interval: 30
 
 # === 响应格式 ===
 response:
-  max_length: 500               # 单次回复最大字数
-  include_emotion_tag: true     # 响应中是否包含情感标签
-  include_live2d_action: true   # 是否触发 Live2D 动作
+  max_length: 500
+  include_emotion_tag: true
+  include_live2d_action: true

@@ -5,8 +5,9 @@
     环境变量  >  .env 文件  >  config.yaml  >  代码默认值
 
 职责划分：
-    config.yaml  → 结构化配置（模型池、角色映射、策略参数），可提交 Git
-    .env         → 敏感凭据（各模型的 API Key、数据库密码），不提交 Git
+    config.yaml（全局）  → 基础设施配置（模型池、存储连接、服务地址）
+    presets/agents/xxx/config.yaml → Agent 行为配置（记忆策略、tool 开关、SP 模式）
+    .env → 敏感凭据（各模型的 API Key、数据库密码）
 """
 
 from __future__ import annotations
@@ -81,16 +82,6 @@ def resolve_model_config(pool_name: str) -> dict[str, Any]:
     1. 从 YAML 的 model_pool.{pool_name} 读取选型信息
     2. 通过 api_key_env / base_url_env 从 .env / 环境变量 读取密钥
     3. 合并为一个完整的 dict 返回
-
-    返回示例：
-    {
-        "provider": "openai",
-        "model": "gpt-4o",
-        "api_key": "sk-xxx",
-        "base_url": "",
-        "temperature": 0.8,
-        "max_tokens": 4096,
-    }
     """
     pool = _y("model_pool", pool_name)
     if pool is None:
@@ -137,15 +128,15 @@ def resolve_role(role: str) -> dict[str, Any]:
 
 
 # ============================================================
-# Settings 类（非模型相关的配置）
+# Settings 类（基础设施配置）
 # ============================================================
 
 class Settings(BaseSettings):
     """
-    应用配置（不含模型层）。
+    应用配置 —— 只包含基础设施层。
 
-    模型配置通过 resolve_role() / resolve_model_config() 动态获取，
-    不在 Settings 里写死字段。
+    记忆策略、tool 开关等行为配置在 Agent 级 config.yaml 中，
+    通过 PresetManager 加载，不在此处。
     """
 
     # === 应用 ===
@@ -158,29 +149,19 @@ class Settings(BaseSettings):
         default=["http://localhost:5173", "http://localhost:3000"],
     )
 
-    # === 记忆层 - 向量数据库 ===
-    vector_db_type: str = _y("memory", "vector_store", "type", default="qdrant")
+    # === 存储 - 向量数据库 ===
+    vector_db_type: str = _y("storage", "vector_store", "type", default="qdrant")
     vector_db_url: str = ""      # .env: VECTOR_DB_URL
     vector_db_api_key: str = ""  # .env: VECTOR_DB_API_KEY
 
-    # === 记忆层 - 关系型存储 ===
-    relational_db_type: str = _y("memory", "relational", "type", default="sqlite")
-    sqlite_db_path: str = _y("memory", "relational", "sqlite_path", default="data/companion.db")
+    # === 存储 - 关系型 ===
+    relational_db_type: str = _y("storage", "relational", "type", default="sqlite")
+    sqlite_db_path: str = _y("storage", "relational", "sqlite_path", default="data/companion.db")
     mysql_host: str = "localhost"
     mysql_port: int = 3306
     mysql_database: str = "start_companion"
     mysql_username: str = "root"
     mysql_password: str = ""
-
-    # === 记忆层 - 策略 ===
-    short_term_turns_threshold: int = _y("memory", "short_term", "turns_threshold", default=20)
-    short_term_keep_recent: int = _y("memory", "short_term", "keep_recent_turns", default=10)
-    long_term_importance_threshold: float = _y("memory", "long_term", "importance_threshold", default=0.3)
-    long_term_auto_approve: bool = _y("memory", "long_term", "auto_approve_extracted", default=False)
-    long_term_recall_limit: int = _y("memory", "long_term", "default_recall_limit", default=5)
-    long_term_score_threshold: float = _y("memory", "long_term", "score_threshold", default=0.5)
-    retrieval_gate_strategy: str = _y("memory", "retrieval_gate", "strategy", default="rule_based")
-    extraction_trigger: str = _y("memory", "extraction", "trigger", default="on_summary_compress")
 
     # === 语音服务 ===
     asr_provider: str = _y("voice", "asr", "provider", default="whisper_api")

@@ -229,7 +229,7 @@ class MemoryManager:
         #    long_term = LongTermMemoryStore(vector_store, card_store, embedding_fn)
         #
         # 3. summarize_fn = 基于 get_model("auxiliary") 的包装
-        #    summarizer = ShortTermSummarizer(summarize_fn, turns_threshold=20, keep_recent_turns=10)
+        #    summarizer = ShortTermSummarizer(summarize_fn, turns_threshold=30, keep_recent_turns=15)
         #
         # 4. extract_fn = 基于 get_model("auxiliary") 的包装（带提示词）
         #    extractor = MemoryExtractor(extract_fn)
